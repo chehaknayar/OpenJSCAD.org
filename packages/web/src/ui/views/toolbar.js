@@ -23,3 +23,4 @@ const toolbar = (state, i18n) => {
 }
 
 module.exports = toolbar
+
