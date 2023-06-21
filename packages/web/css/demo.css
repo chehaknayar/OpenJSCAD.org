@@ -83,7 +83,7 @@ body {
   border-color: black;
   border-radius: 1px;
   border-width: 1px;
-  padding: 0px 2px;
+  padding: 5px 2px;
   margin: 0px 5px 0px 0px;
   background-color: white;
   outline: none;
@@ -102,7 +102,7 @@ body {
   width: 100%;
   padding: 0px 10px;
   user-select: none;
-  top: 30px;
+  top: 40px;
   z-index: 1;
 }
 
@@ -229,7 +229,7 @@ h3 {
   margin: 5px 5px 5px 5px;
 }
 #io {
-  margin: 5px 5px 5px 5px;
+  margin: 7px 5px 5px 5px;
 }
 #exportFormats {
   margin: 0px 5px 0px 5px;
@@ -237,13 +237,12 @@ h3 {
 }
 
 #toolbar {
-  position: absolute;
-  right: 10px;
-  top: 5px;
+  position: relative;
+  top: 7px;
   z-index: 1;
 }
 #toolbar button {
-  border-color: white;
+  border-color: #0f0c0c;
 }
 
 section {
@@ -257,8 +256,8 @@ section {
 
 section.popup-menu {
   position: absolute;
-  top: 40px;
-  right: 10px;
+  top: 30px;
+  left: 10px;
   max-height: 80%;
 }
 
@@ -283,7 +282,7 @@ section.popup-menu ul {
 }
 
 #options {
-  background-color: rgba(255, 255, 255, 0.6);
+  background-color: rgba(255, 255, 255);
   padding-left: 18px;
 }
 
@@ -317,7 +316,7 @@ textarea {
 }
 
 #help {
-  background-color: rgba(255, 255, 255, 0.6);
+  background-color: rgba(255, 255, 255);
 }
 
 #help a {
@@ -360,7 +359,7 @@ button {
   border-radius: 0px;
   border-width: 1px;
   margin: 0px 5px;
-  padding: 2px 6px;
+  /* padding: 2px 6px; */
   background-color: white;
   letter-spacing: .5px;
   outline: none;

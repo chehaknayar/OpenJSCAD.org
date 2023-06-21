@@ -12,6 +12,12 @@ const dom = (state, i18n, paramsCallbacktoStream, editorCallbackToStream) => {
 
   const io = require('./io')(state, i18n)
   const editor = require('./editor').editorWrapper(state, editorCallbackToStream, i18n)
+
+  const saveFile = () => {
+    const blob = new Blob([require('./editor').getEditorSourceCode()], { type: 'text/javascript;charset=utf-8' })
+    FileSaver.saveAs(blob, 'sourcecode.js')
+  }
+
   const toolBar = require('./toolbar')(state, i18n)
 
   const viewer = require('./viewer')(state, i18n)
@@ -26,37 +32,39 @@ const dom = (state, i18n, paramsCallbacktoStream, editorCallbackToStream) => {
   }
 
   const output = html`
-  <div id='container'>
-    <div id='header'>
-      <span id='jscadName'>
-        <h3>JSCAD</h3>
-      </span>
-      <span id='designName'>
-        <h3>${state.design.name}</h3>
-      </span>
-      ${io}
+    <div id='container'>
+      <div id='header'>
+        <span id='jscadName'>
+          <h3>JSCAD</h3>
+        </span>
+        <span id='designName'>
+          <h3>${state.design.name}</h3>
+        </span>
+        ${toolBar}
+        ${io}
+      </div>
+      ${viewerControls}
+      
+
+      <!-- bare bones essentials -->
+      <!--Status information/errors-->
+      ${status}
+
+      <!--Viewer-->
+      ${viewer}
+
+      <!--Params-->
+      ${parameters}
+      <!-- Options Popup -->
+      ${options}
+      <!-- Editor Popup -->
+      ${state.activeTool === 'editor' ? editor : ''}
+      <!-- Help Popup -->
+      ${help}
+
+      
+
     </div>
-
-    ${toolBar}
-    ${viewerControls}
-
-    <!-- bare bones essentials -->
-    <!--Status information/errors-->
-    ${status}
-
-    <!--Viewer-->
-    ${viewer}
-
-    <!--Params-->
-    ${parameters}
-    <!-- Options Popup -->
-    ${options}
-    <!-- Editor Popup -->
-    ${state.activeTool === 'editor' ? editor : ''}
-    <!-- Help Popup -->
-    ${help}
-
-  </div>
   `
 
   return output

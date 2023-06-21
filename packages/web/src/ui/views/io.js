@@ -1,4 +1,5 @@
 const html = require('nanohtml')
+const FileSaver = require('file-saver')
 
 const io = (state, i18n) => {
   const formatsList = state.io.availableExportFormats
@@ -11,22 +12,23 @@ const io = (state, i18n) => {
     })
 
   const exportAvailable = state.io.availableExportFormats.length > 0
-
+  const saveFile = () => {
+    const blob = new Blob([require('./editor').getEditorSourceCode()], { type: 'text/javascript;charset=utf-8' })
+    FileSaver.saveAs(blob, 'sourcecode.js')
+  }
   return html`
-  <span id='io'>
-      <input type="file" value="${i18n`load project`}" id="fileLoader" multiple webkitdirectory mozdirectory msdirectory odirectory directory  />
-      <label for="fileLoader"> ${i18n`load project`}> </label>
 
-      <label for="toggleAutoReload">${i18n`auto reload`}</label>
-        <input type="checkbox" id="toggleAutoReload" checked=${state.design.autoReload}/>
+  <span id='io'>
       <span id='exports' style='visibility:${exportAvailable ? 'visible' : 'hidden'}'>
+        <button id='save' aria-label='save' onclick=${saveFile}>Save Code</button>
         <select id='exportFormats'>
         ${formatsList}
         </select>
-        <input type='button' value="${i18n`export`}" id="exportBtn"/>
+        <input type='button' value="${i18n`Export Model`}" id="exportBtn"/>
+       
       </span>
     </span>
-    `
+   `
 }
 
 module.exports = io

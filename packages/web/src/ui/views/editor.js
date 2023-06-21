@@ -1,5 +1,4 @@
 const html = require('nanohtml')
-
 const CodeMirror = require('codemirror')
 require('codemirror/mode/javascript/javascript')
 require('codemirror/addon/hint/javascript-hint')
@@ -33,13 +32,12 @@ const createFileTree = (editor) => {
 const createWrapper = (state, callbackToStream) => {
   if (!wrapper) {
     wrapper = html`
-    <section class='popup-menu' id='editor' key='editor' style='visibility:${state.activeTool === 'editor' ? 'visible' : 'hidden'}'>
-    <textarea>
-    </textarea>
-    <p style='position:absolute;top:0rem;right:1rem;color:gray;user-select:none'>
-      Press 'shift + enter' to render!
-    </p>
-    </section>
+      <section class='popup-menu' id='editor' key='editor' style='visibility:${state.activeTool === 'editor' ? 'visible' : 'hidden'}'>
+        <textarea></textarea>
+        <p style='position:absolute;top:0rem;right:1rem;color:gray;user-select:none'>
+          Press 'shift + enter' to render!
+        </p>
+      </section>
     `
     wrapper.onkeydown = (e) => e.stopPropagation()
     wrapper.onkeyup = (e) => e.stopPropagation()
@@ -132,6 +130,17 @@ const editorWrapper = (state, editorCallbackToStream) => {
   return el
 }
 
+/*
+ * Get the source code from the editor
+ */
+const getEditorSourceCode = () => {
+  if (editor) {
+    return editor.getValue()
+  }
+  return null
+}
+
 module.exports = {
-  editorWrapper
+  editorWrapper,
+  getEditorSourceCode
 }
