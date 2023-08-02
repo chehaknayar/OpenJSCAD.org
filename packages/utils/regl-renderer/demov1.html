@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Demo Application</title>
+  <style>
+    #jscad {
+      width: 15cm;
+      height: 15cm;
+      margin: 0;
+      outline: 1px solid black;
+    }
+  </style>
+</head>
+<body>
+  <script language="javascript" src="https://unpkg.com/@jscad/modeling" id="MODELING"></script>
+  <script language="javascript" src="./dist/jscad-regl-renderer.min.js" id="RENDERING"></script>
+
+  <div id="jscad"></div>
+  
+ <!-- Input elements for dimensions and position -->
+ 
+ <label for="heightInput">Width:</label>
+<input type="number" id="heightInput" value="30" oninput=""/>
+
+<label for="widthInput">Length:</label>
+<input type="number" id="widthInput" value="100" />
+
+<label for="lengthInput">Height:</label>
+<input type="number" id="lengthInput" value="100" oninput="updateDimensionsOnScreen()"/>
+<br>
+
+<label for="colorPicker">Cube Color:</label>
+<input type="color" id="colorPicker" value="#800080" onchange="updateDimensionsOnScreen()" />
+
+<label for="xaxisInput">X-Axis:</label>
+<input type="number" id="xaxisInput" value="0" oninput="updateDimensionsOnScreen()"/>
+
+<label for="yaxisInput">Y-Axis:</label>
+<input type="number" id="yaxisInput" value="0" oninput="updateDimensionsOnScreen()"/>
+
+<label for="zaxisInput">Z-Axis:</label>
+<input type="number" id="zaxisInput" value="0" oninput="updateDimensionsOnScreen()"/>
+
+<br>
+<!-- add an add cavity checkbox and label -->
+<input type="checkbox" id="addCavityCheckbox"  onchange="updateDimensionsOnScreen()"/>
+<label for="addCavityCheckbox">Add Cavity</label>
+<!--add radio buttons for shape of cavity cylinder or cuboid-->
+<input type="radio" id="cavityShapeCylinder" name="cavityShape" value="cylinder" onchange="updateDimensionsOnScreen()"/>
+<label for="cavityShapeCylinder">Cylinder</label>
+<input type="radio" id="cavityShapeCuboid" name="cavityShape" value="cuboid" onchange="updateDimensionsOnScreen()"/>
+<label for="cavityShapeCuboid">Cuboid</label>
+
+<!-- add textboxes to set the x,y,z axis of the cavity -->
+<label for="cavityXaxisInput">X-Axis:</label>
+<input type="number" id="cavityXaxisInput" value="0" oninput="updateDimensionsOnScreen()"/>
+<label for="cavityYaxisInput">Y-Axis:</label>
+<input type="number" id="cavityYaxisInput" value="0" oninput="updateDimensionsOnScreen()"/> 
+<label for="cavityZaxisInput">Z-Axis:</label>
+<input type="number" id="cavityZaxisInput" value="0" oninput="updateDimensionsOnScreen()"/>
+<label for="cavityHeightInput">Width:</label>
+<input type="number" id="cavityHeightInput" value="10" oninput="updateDimensionsOnScreen()"/>
+<label for="cavityWidthInput">Length:</label>
+<input type="number" id="cavityWidthInput" value="10" oninput="updateDimensionsOnScreen()"/>
+<label for="cavityLengthInput">Height:</label>
+<input type="number" id="cavityLengthInput" value="10" oninput="updateDimensionsOnScreen()"/>
+<label for="cavityRadiusInput">Radius:</label>
+<input type="number" id="cavityRadiusInput" value="10" oninput="updateDimensionsOnScreen()"/>
+
+<br>
+<button id="renderButton1" onclick="addCube()">Add Cube</button>
+<br>
+<label for="cubeNumberInput" id="cubeNumberLabel" visible="false">Edit Cube Number:</label>
+<input type="number" id="cubeNumberInput" value="-1"  oninput="retrieveAndDisplayDimensionsOnScreen()" />
+
+
+<!-- add a textbox to mention the cube number to add the blob to -->
+<!-- <label for="cubeNumberInput" id="cubeNumberLabel" visible="false">Add Cavity to Cube Number:</label> -->
+
+<button id="editButton" onclick="updateCube()">Save</button>
+
+
+
+
+
+  <script language="javascript">
+// ********************
+// The design to render.
+// ********************
+const { booleans, colors, primitives, transforms } = jscadModeling // modeling comes from the included MODELING library
+
+const { intersect, subtract, union } = booleans
+const { colorize } = colors
+const { cube, cuboid, line, sphere, cylinder, star } = primitives
+const {translate} = transforms
+
+var listofcubes = [];
+var listofcubestorender = [];
+var editFlag = false;
+var cavityFlag = false;
+class cubes {
+  constructor(height, width, length, xaxis, yaxis, zaxis, blobb, color) {
+    this.height = height?height:30;
+    this.width = width?width:30;
+    this.length = length?length:30;
+    this.xaxis = xaxis?xaxis:0;
+    this.yaxis = yaxis?yaxis:0;
+    this.zaxis = zaxis?zaxis:0;
+    this.color = color?color:[0.5,0,0,0.5]
+    this.blobb = blobb?blobb:null;
+  }
+
+  //add a list of getter and setter functions
+    // getheight() {
+    //     return this.height;
+    // }
+    // setheight(value) {
+    //     this.height = value;
+    // }
+    // getwidth() {
+    //     return this.width;
+    // }
+    // setwidth(value) {
+    //     this.width = value;
+    // }
+    // getlength() {
+    //     return this.length;
+    // }
+    // setlength(value) {
+    //     this.length = value;
+    // }
+
+}
+
+class blob {
+  constructor(height, width, length, xaxis, yaxis, zaxis, radius, shape) {
+      this.height = height?height:10;
+      this.width = width?width:10;
+      this.length = length?length:10;
+      this.xaxis = xaxis?xaxis:0;
+      this.yaxis = yaxis?yaxis:0;
+      this.zaxis = zaxis?zaxis:0;
+      this.radius = radius?radius:10;
+      this.shape = shape
+    }
+
+    
+    // this.cubeNumber = cubeNumber?cubeNumber:0;
+  
+}
+
+
+
+const addCube = () => {
+        //instantiate new cube
+        const height = Number(document.getElementById("heightInput").value);
+        const width = Number(document.getElementById("widthInput").value);
+        const length = Number(document.getElementById("lengthInput").value);
+        const xaxis = Number(document.getElementById("xaxisInput").value);
+        const yaxis = Number(document.getElementById("yaxisInput").value);
+        const zaxis = Number(document.getElementById("zaxisInput").value);
+        const isblob = document.getElementById("addCavityCheckbox").checked;
+        const colorPicker = document.getElementById("colorPicker");
+        const color = hexToRgbA(colorPicker.value);
+        console.log("COLOR BEING SAVED:",colorPicker,colorPicker.value,color)
+        // cb = new cubes(parameters?parameters.height:30, parameters?parameters.width:30, parameters?parameters.length:30);
+        
+        blobb = null;
+        if (isblob){
+          //obtaining values from user input
+          const cavityXaxisInput = Number(document.getElementById("cavityXaxisInput").value);
+          const cavityYaxisInput = Number(document.getElementById("cavityYaxisInput").value);
+          const cavityZaxisInput = Number(document.getElementById("cavityZaxisInput").value);
+          const cavityHeightInput = Number(document.getElementById("cavityHeightInput").value);
+          const cavityRadiusInput = Number(document.getElementById("cavityRadiusInput").value);
+          const cavityWidthInput = Number(document.getElementById("cavityWidthInput").value);
+          const cavityLengthInput = Number(document.getElementById("cavityLengthInput").value);
+          const cavityShape = Number(document.getElementById("cavityShapeCylinder").checked)?'cylinder':'cuboid'
+          // console.log('cavity shape added',cavityShape)
+          
+          //creating class instances
+          blobb = new blob(cavityHeightInput?cavityHeightInput:10,cavityWidthInput?cavityWidthInput:10,cavityLengthInput?cavityLengthInput:10,cavityXaxisInput?cavityXaxisInput:0,cavityYaxisInput==0?(width/2)+yaxis:cavityYaxisInput,cavityZaxisInput?cavityZaxisInput:0,cavityRadiusInput?cavityRadiusInput:10,cavityShape);
+          
+          cb = new cubes(height?height:30, width?width:30, length?length:30, xaxis?xaxis:0, yaxis?yaxis:0, zaxis?zaxis:0, blobb?blobb:null, color);
+          var newCube
+          var cavity
+          //creating the solids using jscad functions
+          // console.log("cavity shape:", cavityShape)
+          if(cavityShape == 'cylinder') {
+             cavity = translate([cavityXaxisInput?cavityXaxisInput:0,cavityYaxisInput==0?(width/2)+yaxis:cavityYaxisInput,cavityZaxisInput?cavityZaxisInput:0],([0, 0.5, 0, 0.5], cylinder({height: cavityLengthInput,radius:cavityRadiusInput})));
+          } else if( cavityShape == 'cuboid'){
+             cavity = translate([cavityXaxisInput?cavityXaxisInput:0,cavityYaxisInput==0?(width/2)+yaxis:cavityYaxisInput,cavityZaxisInput?cavityZaxisInput:0],([0, 0.5, 0, 0.5], cuboid({size: [cavityHeightInput,cavityWidthInput,cavityLengthInput]})));
+          }
+          document.getElementById("cavityYaxisInput").value = cavityYaxisInput==0?(width/2)+yaxis:cavityYaxisInput;
+          newCube = translate([xaxis,yaxis,zaxis],(colorize(color,(subtract(cuboid({ size: [cb.height, cb.width, cb.length] }),cavity)))));
+          // const newCube = translate([xaxis,yaxis,zaxis],((colorize([0.5, 0, 0, 0.5], cuboid({ size: [cb.height, cb.width, cb.length] })))),translate([cavityXaxisInput,cavityYaxisInput,cavityZaxisInput],cuboid({size: [10,10,10]})))
+          
+          //add solid to cubes list and list of solids to render
+          listofcubes.push(cb);
+          // listofcubestorender.push(colorize([0.5, 0, 0, 0.5],subtract(newCube,cavity)));
+          listofcubestorender.push(newCube);
+          
+          // console.log("cb:",cb)
+          // console.log("blobb:",blobb)
+          // console.log("newCube:",newCube)
+          // console.log("listofcubes:",listofcubes)
+          // console.log("listofcubestorender:",listofcubestorender)
+        } else {
+          cb = new cubes(height?height:30, width?width:30, length?length:30, xaxis?xaxis:0, yaxis?yaxis:0, zaxis?zaxis:0, blobb?blobb:null, color);
+          const newCube = translate([xaxis,yaxis,zaxis],colorize(color, cuboid({ size: [cb.height, cb.width, cb.length] })));
+          listofcubes.push(cb);
+          listofcubestorender.push(newCube);
+        }
+        
+        // listofcubes.push(cb);
+        // renderDemo({cubes:listofcubes})
+        // console.log(cb)
+      
+      // listofcubestorender.push(newCube);
+      renderDemo({cubes:listofcubestorender});
+      updateDimensionsOnScreen();
+    }
+    const hexToRgbA = (hex) => {
+    const shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
+    hex = hex.replace(shorthandRegex, (m, r, g, b) => r + r + g + g + b + b);
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    const rgba = result
+        ? {
+            r: parseInt(result[1], 16),
+            g: parseInt(result[2], 16),
+            b: parseInt(result[3], 16),
+            a: 0.5 // You can set the alpha value to control transparency
+        }
+        : null;
+    return rgba ? [rgba.r / 255, rgba.g / 255, rgba.b / 255, rgba.a] : null;
+}
+
+function rgbToHex(r, g, b) {
+  const clampAndToHex = (number) => {
+    const clamped = Math.max(0, Math.min(1, number));
+    return Math.round(clamped * 255).toString(16).padStart(2, "0");
+  };
+
+  const red = clampAndToHex(r);
+  const green = clampAndToHex(g);
+  const blue = clampAndToHex(b);
+
+  return `#${red}${green}${blue}`;
+}
+
+
+
+
+    // const toggleEditMode = () => {
+    //     editFlag = !editFlag;
+        
+    //     const cubeNumberLabel = document.getElementById("cubeNumberLabel");
+    //     const cubeNumberInput = document.getElementById("cubeNumberInput");
+    //     const editButton = document.getElementById("editButton");
+
+    //     // cubeNumberInput.disabled = !cubeNumberInput.disabled;
+
+    //     if (editFlag) {
+    //         cubeNumberLabel.setAttribute("visible", "true");
+    //         // cubeNumberInput.disabled = false;
+    //         editButton.textContent = "Save";
+    //     } else {
+    //         cubeNumberLabel.setAttribute("visible", "false");
+    //         // cubeNumberInput.disabled = true;
+    //         updateCube();
+    //         editButton.textContent = "Edit";
+    //     }
+    //     };
+
+const updateCube = () => {
+    const height = Number(document.getElementById("heightInput").value);
+    const width = Number(document.getElementById("widthInput").value);
+    const length = Number(document.getElementById("lengthInput").value);
+    const colorPicker = document.getElementById("colorPicker");
+    const color = hexToRgbA(colorPicker.value);
+    console.log("COLOR BEING SAVED:",colorPicker,colorPicker.value,color)
+
+    const xaxis = Number(document.getElementById("xaxisInput").value);
+    const yaxis = Number(document.getElementById("yaxisInput").value);
+    const zaxis = Number(document.getElementById("zaxisInput").value);
+    const isblob = document.getElementById("addCavityCheckbox").checked;
+    const cavityXaxisInput = Number(document.getElementById("cavityXaxisInput").value);
+    const cavityYaxisInput = Number(document.getElementById("cavityYaxisInput").value);
+    const cavityZaxisInput = Number(document.getElementById("cavityZaxisInput").value);
+    const cavityHeightInput = Number(document.getElementById("cavityHeightInput").value);
+    const cavityWidthInput = Number(document.getElementById("cavityWidthInput").value);
+    const cavityLengthInput = Number(document.getElementById("cavityLengthInput").value);
+    const cavityRadiusInput = Number(document.getElementById("cavityRadiusInput").value);
+    const cavityShape = Number(document.getElementById("cavityShapeCylinder").checked)?'cylinder':'cuboid'
+    const cubeNumber = Number(document.getElementById("cubeNumberInput").value);
+    // console.log('cavity shape in updatecube:',cavityShape)
+    // Validate cubeNumber input
+    if (cubeNumber >= 0 && cubeNumber < listofcubes.length) {
+        listofcubes[cubeNumber].height = height;
+        listofcubes[cubeNumber].width = width;
+        listofcubes[cubeNumber].length = length;
+        listofcubes[cubeNumber].xaxis = xaxis;
+        listofcubes[cubeNumber].yaxis = yaxis;
+        listofcubes[cubeNumber].zaxis = zaxis;
+        
+        if (isblob){
+          if(listofcubes[cubeNumber].blobb == null)
+            listofcubes[cubeNumber].blobb = new blob(cavityHeightInput?cavityHeightInput:10, cavityWidthInput?cavityWidthInput:10, cavityLengthInput?cavityLengthInput:10, cavityXaxisInput?cavityXaxisInput:0, cavityYaxisInput?cavityYaxisInput:0, cavityZaxisInput?cavityZaxisInput:0,cavityRadiusInput?cavityRadiusInput:10,cavityShape);
+          else {
+            listofcubes[cubeNumber].blobb.height = cavityHeightInput?cavityHeightInput:10;
+            listofcubes[cubeNumber].blobb.width = cavityWidthInput?cavityWidthInput:10;
+            listofcubes[cubeNumber].blobb.length = cavityLengthInput?cavityLengthInput:10;
+            listofcubes[cubeNumber].blobb.radius = cavityRadiusInput?cavityRadiusInput:10;
+            listofcubes[cubeNumber].blobb.xaxis = cavityXaxisInput?cavityXaxisInput:0;
+            listofcubes[cubeNumber].blobb.yaxis = cavityYaxisInput?cavityYaxisInput:(width/2)+yaxis;
+            listofcubes[cubeNumber].blobb.zaxis = cavityZaxisInput?cavityZaxisInput:0;
+            listofcubes[cubeNumber].blobb.shape = cavityShape
+
+          }
+          if (cavityShape == 'cylinder'){
+            cavity = translate([cavityXaxisInput?cavityXaxisInput:0,cavityYaxisInput?cavityYaxisInput:(width/2)+yaxis,cavityZaxisInput?cavityZaxisInput:0],cylinder({height: cavityLengthInput?cavityLengthInput:10,radius:cavityRadiusInput?cavityRadiusInput:10}));
+            newCube = translate([xaxis,yaxis,zaxis],(colorize(color, subtract(cuboid({ size: [height, width, length] }),cavity))));
+            listofcubestorender[cubeNumber] = newCube
+          } else if (cavityShape == 'cuboid') {
+            cavity = translate([cavityXaxisInput?cavityXaxisInput:0,cavityYaxisInput?cavityYaxisInput:(width/2)+yaxis,cavityZaxisInput?cavityZaxisInput:0],cuboid({size: [cavityHeightInput?cavityHeightInput:10,cavityWidthInput?cavityWidthInput:10,cavityLengthInput?cavityLengthInput:10]}));
+            newCube = translate([xaxis,yaxis,zaxis],(colorize(color, subtract(cuboid({ size: [height, width, length] }),cavity))));
+            listofcubestorender[cubeNumber] = newCube
+          }
+        } else {
+          listofcubes[cubeNumber].blobb = null;
+          listofcubestorender[cubeNumber] = translate([xaxis,yaxis,zaxis],(colorize(color, cuboid({ size: [height, width, length] }))));
+        }
+        // listofcubestorender[cubeNumber] = translate([xaxis,yaxis,zaxis],(colorize([0.5, 0, 0, 0.5], cuboid({ size: [height, width, length] }))));
+        renderDemo({ cubes: listofcubestorender });
+    } else {
+        alert("Invalid cube number!");
+    }
+    // toggleEditMode()
+    updateDimensionsOnScreen();
+}
+
+const updateDimensionsOnScreen = () => {
+    // const height = Number(document.getElementById("heightInput").value);
+    if (document.getElementById("addCavityCheckbox").checked) {
+      document.getElementById("cavityXaxisInput").disabled = false;
+      document.getElementById("cavityYaxisInput").disabled = false;
+      document.getElementById("cavityZaxisInput").disabled = false;
+      // console.log("document.getElementById('cavityShapeCylinder').value:",document.getElementById("cavityShapeCylinder").checked)
+      if(document.getElementById("cavityShapeCylinder").checked){
+        document.getElementById("cavityHeightInput").disabled = true;
+        document.getElementById("cavityWidthInput").disabled = true;
+        document.getElementById("cavityLengthInput").disabled = false;
+        document.getElementById("cavityRadiusInput").disabled = false;
+      } else if (document.getElementById("cavityShapeCuboid").checked){
+        document.getElementById("cavityHeightInput").disabled = false;
+        document.getElementById("cavityWidthInput").disabled = false;
+        document.getElementById("cavityLengthInput").disabled = false;
+        document.getElementById("cavityRadiusInput").disabled = true;
+      }
+    } else {
+      document.getElementById("cavityXaxisInput").disabled = true;
+      document.getElementById("cavityYaxisInput").disabled = true;
+      document.getElementById("cavityZaxisInput").disabled = true;
+      document.getElementById("cavityHeightInput").disabled = true;
+      document.getElementById("cavityWidthInput").disabled = true;
+      document.getElementById("cavityLengthInput").disabled = true;
+      document.getElementById("cavityRadiusInput").disabled = true;
+    }
+}
+updateDimensionsOnScreen();
+
+const retrieveAndDisplayDimensionsOnScreen = () => {
+    const cubeNumber = Number(document.getElementById("cubeNumberInput").value);
+    
+    // console.log("retrieveAndDisplayDimensionsOnScreen:")
+    // Validate cubeNumber input
+    if (cubeNumber >= 0 && cubeNumber < listofcubes.length) {
+        //retrieve data from listofcubes
+        const height = listofcubes[cubeNumber].height;
+        const width = listofcubes[cubeNumber].width;
+        const length = listofcubes[cubeNumber].length;
+        const color = listofcubes[cubeNumber].color;
+        const xaxis = listofcubes[cubeNumber].xaxis;
+        const yaxis = listofcubes[cubeNumber].yaxis;
+        const zaxis = listofcubes[cubeNumber].zaxis;
+        const isblob = listofcubes[cubeNumber].blobb != null;
+        
+        //display data on screen
+        document.getElementById("heightInput").value = height;
+        document.getElementById("widthInput").value = width;
+        document.getElementById("lengthInput").value = length;
+        document.getElementById("xaxisInput").value = xaxis;
+        document.getElementById("yaxisInput").value = yaxis;
+        document.getElementById("zaxisInput").value = zaxis;
+        document.getElementById("addCavityCheckbox").checked = isblob;
+        document.getElementById("colorPicker").value = rgbToHex(...color);
+        console.log("COLOR:",color,rgbToHex(...color))
+
+        // newCube = translate([xaxis,yaxis,zaxis],(([0, 0.5, 0, 5], cuboid({ size: [height, width, length] }))));
+        if (isblob){
+          const cavityXaxisInput = listofcubes[cubeNumber].blobb.xaxis;
+          const cavityYaxisInput = listofcubes[cubeNumber].blobb.yaxis;
+          const cavityZaxisInput = listofcubes[cubeNumber].blobb.zaxis;
+          const cavityHeightInput = listofcubes[cubeNumber].blobb.height;
+          const cavityRadiusInput = listofcubes[cubeNumber].blobb.radius;
+          const cavityWidthInput = listofcubes[cubeNumber].blobb.width;
+          const cavityLengthInput = listofcubes[cubeNumber].blobb.length;
+          const cavityShape = listofcubes[cubeNumber].blobb.shape;
+
+          document.getElementById("cavityXaxisInput").value = cavityXaxisInput;
+          document.getElementById("cavityYaxisInput").value = cavityYaxisInput;
+          document.getElementById("cavityZaxisInput").value = cavityZaxisInput;
+          document.getElementById("cavityHeightInput").value = cavityHeightInput;
+          document.getElementById("cavityWidthInput").value = cavityWidthInput;
+          document.getElementById("cavityLengthInput").value = cavityLengthInput;
+          document.getElementById("cavityRadiusInput").value = cavityRadiusInput;
+          document.getElementById("cavityShapeCylinder").checked = cavityShape == "cylinder";
+          document.getElementById("cavityShapeCuboid").checked = cavityShape == "cuboid";
+          // console.log("cavityShape:::", cavityShape)
+          if (cavityShape == "cylinder"){
+            blobb = translate([cavityXaxisInput?cavityXaxisInput:0,cavityYaxisInput?cavityYaxisInput:(width/2)+yaxis,cavityZaxisInput?cavityZaxisInput:0],cylinder({height: cavityLengthInput?cavityLengthInput:0, radius:cavityRadiusInput?cavityRadiusInput:0}));
+            newCube = translate([xaxis,yaxis,zaxis],(colorize([0, 0.5, 0, 1], subtract(cuboid({ size: [height, width, length] }),blobb))));
+            listofcubestorender[cubeNumber] = newCube
+          } else if (cavityShape == "cuboid"){
+            blobb = translate([cavityXaxisInput?cavityXaxisInput:0,cavityYaxisInput?cavityYaxisInput:(width/2)+yaxis,cavityZaxisInput?cavityZaxisInput:0],cuboid({size: [cavityHeightInput?cavityHeightInput:0,cavityWidthInput?cavityWidthInput:0,cavityLengthInput?cavityLengthInput:0]}));
+            newCube = translate([xaxis,yaxis,zaxis],(colorize([0, 0.5, 0, 1], subtract(cuboid({ size: [height, width, length] }),blobb))));
+            listofcubestorender[cubeNumber] = newCube
+          }
+        } else {
+          document.getElementById("cavityXaxisInput").value = 0;
+          document.getElementById("cavityYaxisInput").value = 0;
+          document.getElementById("cavityZaxisInput").value = 0;
+          document.getElementById("cavityHeightInput").value = 0;
+          document.getElementById("cavityWidthInput").value = 0;
+          document.getElementById("cavityLengthInput").value = 0;
+          newCube = translate([xaxis,yaxis,zaxis],(colorize(color, cuboid({ size: [height, width, length] }))));
+          listofcubestorender[cubeNumber] = newCube
+          
+        }
+        
+        // console.log(listofcubestorender)
+        //parse listofcubestorender and change color of all cubes except the one to be edited
+        for(i=0;i<listofcubestorender.length;i++){
+            if(i!=cubeNumber){
+                  listofcubestorender[i] = (colorize(listofcubes[i].color,listofcubestorender[i]))
+                // listofcubestorender[i] = translate([listofcubes[i].xaxis,listofcubes[i].yaxis,listofcubes[i].zaxis],(colorize([0.5, 0, 0, 0.5], cuboid({ size: [listofcubes[i].height, listofcubes[i].width, listofcubes[i].length] }))));
+            }
+        }
+        // console.log('listofcubes', listofcubes)
+        // console.log('listofcubestorender', listofcubestorender)
+        renderDemo({ cubes: listofcubestorender });
+    }
+    updateDimensionsOnScreen();
+
+}
+
+// const getCubesforRendering = (parameters) => {
+//     if(parameters.cubes){
+//         for(i=0;i<parameters.cubes.length;i++){
+//         const cubee = colorize([0.5, 0, 0, 0.65], cuboid({ size: [parameters.cubes[i].height, parameters.cubes[i].width, parameters.cubes[i].length] }));
+//         listofcubestorender.push(cubee);
+//     }
+//     }
+//     return listofcubestorender;
+// }
+
+  </script>
+
+  <script language="javascript">
+// ********************
+// Renderer configuration and initiation.
+// ********************
+const { prepareRender, drawCommands, cameras, controls, entitiesFromSolids } = jscadReglRenderer
+
+const perspectiveCamera = cameras.perspective
+const orbitControls = controls.orbit
+
+const containerElement = document.getElementById("jscad")
+
+const width = containerElement.clientWidth
+const height = containerElement.clientHeight
+
+const state = {}
+
+// prepare the camera
+state.camera = Object.assign({}, perspectiveCamera.defaults)
+perspectiveCamera.setProjection(state.camera, state.camera, { width, height })
+perspectiveCamera.update(state.camera, state.camera)
+
+// prepare the controls
+state.controls = orbitControls.defaults
+
+// prepare the renderer
+const setupOptions = {
+  glOptions: { container: containerElement },
+}
+const renderer = prepareRender(setupOptions)
+
+const gridOptions = {
+  visuals: {
+    drawCmd: 'drawGrid',
+    show: true
+  },
+  size: [500, 500],
+  ticks: [25, 5],
+  // color: [0, 0, 1, 1],
+  // subColor: [0, 0, 1, 0.5]
+}
+
+const axisOptions = {
+  visuals: {
+    drawCmd: 'drawAxis',
+    show: true
+  },
+  size: 300,
+  // alwaysVisible: false,
+  // xColor: [0, 0, 1, 1],
+  // yColor: [1, 0, 1, 1],
+  // zColor: [0, 0, 0, 1]
+}
+
+const entities = entitiesFromSolids({}, listofcubes)
+
+// assemble the options for rendering
+const renderOptions = {
+  camera: state.camera,
+  drawCommands: {
+    drawAxis: drawCommands.drawAxis,
+    drawGrid: drawCommands.drawGrid,
+    drawLines: drawCommands.drawLines,
+    drawMesh: drawCommands.drawMesh
+  },
+  // define the visual content
+  entities: [
+    gridOptions,
+    axisOptions,
+    ...entities
+  ]
+}
+
+// the heart of rendering, as themes, controls, etc change
+let updateView = true
+
+const doRotatePanZoom = () => {
+
+  if (rotateDelta[0] || rotateDelta[1]) {
+    const updated = orbitControls.rotate({ controls: state.controls, camera: state.camera, speed: rotateSpeed }, rotateDelta)
+    state.controls = { ...state.controls, ...updated.controls }
+    updateView = true
+    rotateDelta = [0, 0]
+  }
+
+  if (panDelta[0] || panDelta[1]) {
+    const updated = orbitControls.pan({ controls:state.controls, camera:state.camera, speed: panSpeed }, panDelta)
+    state.controls = { ...state.controls, ...updated.controls }
+    panDelta = [0, 0]
+    state.camera.position = updated.camera.position
+    state.camera.target = updated.camera.target
+    updateView = true
+  }
+
+  if (zoomDelta) {
+    const updated = orbitControls.zoom({ controls:state.controls, camera:state.camera, speed: zoomSpeed }, zoomDelta)
+    state.controls = { ...state.controls, ...updated.controls }
+    zoomDelta = 0
+    updateView = true
+  }
+}
+
+const updateAndRender = (timestamp) => {
+  doRotatePanZoom()
+
+  if (updateView) {
+    const updates = orbitControls.update({ controls: state.controls, camera: state.camera })
+    state.controls = { ...state.controls, ...updates.controls }
+    updateView = state.controls.changed // for elasticity in rotate / zoom
+
+    state.camera.position = updates.camera.position
+    perspectiveCamera.update(state.camera)
+
+    renderer(renderOptions)
+  }
+  window.requestAnimationFrame(updateAndRender)
+}
+window.requestAnimationFrame(updateAndRender)
+
+// convert HTML events (mouse movement) to viewer changes
+let lastX = 0
+let lastY = 0
+
+const rotateSpeed = 0.002
+const panSpeed = 1
+const zoomSpeed = 0.08
+let rotateDelta = [0, 0]
+let panDelta = [0, 0]
+let zoomDelta = 0
+let pointerDown = false
+
+const moveHandler = (ev) => {
+  if(!pointerDown) return
+  const dx = lastX - ev.pageX 
+  const dy = ev.pageY - lastY 
+
+  const shiftKey = (ev.shiftKey === true) || (ev.touches && ev.touches.length > 2)
+  if (shiftKey) {
+    panDelta[0] += dx
+    panDelta[1] += dy
+  } else {
+    rotateDelta[0] -= dx
+    rotateDelta[1] -= dy
+  }
+
+  lastX = ev.pageX
+  lastY = ev.pageY
+
+  ev.preventDefault()
+}
+const downHandler = (ev) => {
+  pointerDown = true
+  lastX = ev.pageX
+  lastY = ev.pageY
+  containerElement.setPointerCapture(ev.pointerId)
+}
+
+const upHandler = (ev) => {
+  pointerDown = false
+  containerElement.releasePointerCapture(ev.pointerId)
+}
+
+const wheelHandler = (ev) => {
+  zoomDelta += ev.deltaY
+  ev.preventDefault()
+}
+
+containerElement.onpointermove = moveHandler
+containerElement.onpointerdown = downHandler
+containerElement.onpointerup = upHandler
+containerElement.onwheel = wheelHandler
+
+// Helper function to display the dimensions
+const displayDimensions = (dimensions) => {
+      const dimensionsDiv = document.getElementById("dimensions");
+      dimensionsDiv.textContent = `Width: ${dimensions[0]} Height: ${dimensions[1]} Depth: ${dimensions[2]}`;
+    };
+
+    // Attach a click event listener to the container element to handle model clicks
+    containerElement.addEventListener("click", (event) => {
+      const pickResult = renderer.pickEntity(event.clientX, event.clientY);
+      if (pickResult && pickResult.entity) {
+        const dimensions = pickResult.entity.size;
+        displayDimensions(dimensions);
+      }
+    });
+
+
+const renderDemo = (parameters) => {
+    // console.log('renderDemo', parameters)
+    // console.log(listofcubes)
+    // console.log(listofcubestorender)
+      const entities = entitiesFromSolids({}, parameters.cubes?parameters.cubes:listofcubestorender);
+
+      renderOptions.entities = [
+        gridOptions,
+        axisOptions,
+        ...entities
+      ];
+
+      renderer(renderOptions);
+    };
+
+    // Call the renderDemo function initially with the default parameters
+    renderDemo({ listofcubestorender });
+  </script>
+  <div id="dimensions"></div>
+</body>
+</html>
